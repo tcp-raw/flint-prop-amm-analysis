@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flint Trade — Pro-Rata vs FIFO Matching Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #080c14; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+  </style>
+</head>
+<body class="p-6 md:p-10 min-h-screen flex flex-col justify-between">
+  <div class="max-w-6xl mx-auto w-full space-y-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400 bg-clip-text text-transparent">
+          Flint Pro-Rata vs FIFO Matching Engine Simulator
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">Simulate Solana Aggregator Trade Distribution: Latency Race vs Capital Depth</p>
+      </div>
+      <a href="https://flint.trade" target="_blank" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition">
+        Powered by Flint.trade ↗
+      </a>
+    </div>
+
+    <!-- Interactive Controls -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass p-6 rounded-2xl space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Incoming Aggregator Trade</h2>
+        <div>
+          <label class="text-xs text-slate-300 flex justify-between">
+            <span>Trade Size:</span>
+            <span id="tradeSizeLabel" class="font-bold text-amber-400">$100,000 USDC</span>
+          </label>
+          <input type="range" id="tradeSizeInput" min="10000" max="500000" step="10000" value="100000" class="w-full mt-2 accent-amber-500">
+        </div>
+      </div>
+
+      <div class="glass p-6 rounded-2xl space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Maker A (HFT Colocated)</h2>
+        <div>
+          <label class="text-xs text-slate-300 flex justify-between">
+            <span>Quoted Size:</span>
+            <span id="makerASizeLabel" class="font-bold text-cyan-400">$60,000 USDC</span>
+          </label>
+          <input type="range" id="makerASizeInput" min="10000" max="300000" step="5000" value="60000" class="w-full mt-2 accent-cyan-500">
+          <span class="text-[10px] text-slate-400">Latency: 5ms (Fastest)</span>
+        </div>
+      </div>
+
+      <div class="glass p-6 rounded-2xl space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Maker B (Quant Desk)</h2>
+        <div>
+          <label class="text-xs text-slate-300 flex justify-between">
+            <span>Quoted Size:</span>
+            <span id="makerBSizeLabel" class="font-bold text-emerald-400">$140,000 USDC</span>
+          </label>
+          <input type="range" id="makerBSizeInput" min="10000" max="300000" step="5000" value="140000" class="w-full mt-2 accent-emerald-500">
+          <span class="text-[10px] text-slate-400">Latency: 25ms (Slower but 2.3x Deeper)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Graphs -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="glass p-6 rounded-2xl">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-rose-400">Traditional FIFO (Speed Race)</h2>
+          <span class="text-xs text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">Adverse Selection Risk</span>
+        </div>
+        <canvas id="fifoChart" height="150"></canvas>
+        <p class="text-xs text-slate-400 mt-4 leading-relaxed">
+          In FIFO, the fastest connection captures 100% of its quote first, regardless of how deep other market makers are quoting. Slower desks receive zero flow.
+        </p>
+      </div>
+
+      <div class="glass p-6 rounded-2xl">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-bold text-amber-400">Flint Multi-Maker Pro-Rata</h2>
+          <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Fair Institutional Allocation</span>
+        </div>
+        <canvas id="proRataChart" height="150"></canvas>
+        <p class="text-xs text-slate-400 mt-4 leading-relaxed">
+          In Flint, fills are distributed proportionally to quoted size. Maker B gets 70% of the volume because of superior balance sheet depth, not nanosecond latency.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let fifoChart, proRataChart;
+
+    function updateSimulation() {
+      const tradeSize = parseFloat(document.getElementById('tradeSizeInput').value);
+      const makerA = parseFloat(document.getElementById('makerASizeInput').value);
+      const makerB = parseFloat(document.getElementById('makerBSizeInput').value);
+
+      document.getElementById('tradeSizeLabel').innerText = `$${tradeSize.toLocaleString()} USDC`;
+      document.getElementById('makerASizeLabel').innerText = `$${makerA.toLocaleString()} USDC`;
+      document.getElementById('makerBSizeLabel').innerText = `$${makerB.toLocaleString()} USDC`;
+
+      // FIFO calculation (Maker A is faster)
+      const fifoFillA = Math.min(tradeSize, makerA);
+      const fifoFillB = Math.min(tradeSize - fifoFillA, makerB);
+
+      // Pro-Rata calculation
+      const totalDepth = makerA + makerB;
+      const proRataFillA = Math.min(makerA, tradeSize * (makerA / totalDepth));
+      const proRataFillB = Math.min(makerB, tradeSize * (makerB / totalDepth));
+
+      fifoChart.data.datasets[0].data = [fifoFillA, fifoFillB];
+      fifoChart.update();
+
+      proRataChart.data.datasets[0].data = [proRataFillA, proRataFillB];
+      proRataChart.update();
+    }
+
+    window.onload = () => {
+      const ctxFifo = document.getElementById('fifoChart').getContext('2d');
+      fifoChart = new Chart(ctxFifo, {
+        type: 'bar',
+        data: {
+          labels: ['Maker A (Fast)', 'Maker B (Deep)'],
+          datasets: [{
+            label: 'Filled Volume ($)',
+            data: [60000, 40000],
+            backgroundColor: ['#06b6d4', '#f43f5e'],
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      const ctxProRata = document.getElementById('proRataChart').getContext('2d');
+      proRataChart = new Chart(ctxProRata, {
+        type: 'bar',
+        data: {
+          labels: ['Maker A (30% Share)', 'Maker B (70% Share)'],
+          datasets: [{
+            label: 'Filled Volume ($)',
+            data: [30000, 70000],
+            backgroundColor: ['#06b6d4', '#10b981'],
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      document.getElementById('tradeSizeInput').addEventListener('input', updateSimulation);
+      document.getElementById('makerASizeInput').addEventListener('input', updateSimulation);
+      document.getElementById('makerBSizeInput').addEventListener('input', updateSimulation);
+      updateSimulation();
+    };
+  </script>
+</body>
+</html>
