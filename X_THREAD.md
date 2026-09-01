@@ -101,7 +101,7 @@ Audited by Certora.
 
 Flint doesn't remove the hard part of market making. You keep your pricing, risk and inventory.
 
-It removes what was never your edge: tx landing, priority fees, aggregator integrations, and paying a write every time you change a quote.
+It removes what was never your edge: tx landing, priority fees, aggregator upkeep, and paying a write on every quote change.
 
 Your alpha is your model.
 
