@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary & Problem Framing
 
-Solana processes over **$47.25B in monthly DEX volume**, with aggregators like [Jupiter](https://jup.ag/), [DFlow](https://dflow.net/), and [Titan](https://titan.exchange/) routing more than **$1.36 Trillion in all-time trading flow**. 
+Solana processes over **$47.25B in monthly DEX volume**, with aggregators like [Jupiter](https://jup.ag/), [DFlow](https://dflow.net/), and [Titan](https://titan.exchange/) routing more than **$1.36 Trillion in all-time trading flow** (flint.trade, citing DefiLlama, as of 2026-08-07). 
 
 For professional market-making desks and institutional quantitative trading firms, quoting on Solana is no longer optional—it is the deepest liquidity arena in digital assets.
 
@@ -24,11 +24,11 @@ However, traditional market makers face an infrastructural chasm:
            ▼                                                     ▼
 ┌──────────────────────────────────────┐   ┌──────────────────────────────────────┐
 │       The In-House Prop AMM          │   │        The Flint Infrastructure      │
-│  - $300k+ Initial Rust/Anchor Dev    │   │  - Turnkey Rust SDK (`QuoteBuilder`) │
+│  - Own the Rust/Anchor codebase      │   │  - Turnkey Rust SDK (`QuoteBuilder`) │
 │  - Dedicated Staked TPU RPC Nodes    │   │  - Abstracted Landing & Priority Fees│
 │  - Fragmented Single-Maker Pools     │   │  - Consolidated Multi-Maker Depth    │
 │  - Toxic Latency Races (FIFO Pickoff)│   │  - Pro-Rata Matching & Fairness      │
-│  - Manual Aggregator BD/Integration  │   │  - Instant Jupiter, DFlow, Titan Flow│
+│  - Manual Aggregator BD/Integration  │   │  - Jupiter/DFlow/Titan live│
 └──────────────────────────────────────┘   └──────────────────────────────────────┘
 ```
 
@@ -46,7 +46,7 @@ Solana's runtime operates on 400ms slots with Stake-Weighted Quality of Service 
 To land quote updates reliably, an in-house desk must:
 - Stake tens of thousands of SOL on dedicated validator nodes to secure priority TPU packet pipelines.
 - Manage dynamic Jito MEV tips and compute unit price bidding on a millisecond-by-millisecond basis.
-- Maintain global geodistributed RPC fleets (Frankfurt, Tokyo, New York) costing upwards of **$15,000–$25,000/month**.
+- Maintain geodistributed RPC capacity close to major validator clusters, which is a recurring operating line item rather than a one-time build cost. Published pricing varies widely by provider and commitment, so no figure is asserted here.
 
 **Flint Resolution:** Flint abstracts away all gas, priority fees, and transaction landing. The **Flint Server** manages optimized transaction landing pipelines directly against the Solana cluster, ensuring quotes land in high-priority slots without desk DevOps overhead.
 
@@ -125,16 +125,35 @@ $$\text{Quote}_{\text{JTO/SOL}} = \frac{\text{Quote}_{\text{JTO/USDC}}}{\text{Qu
 
 ---
 
-## 4. Institutional Total Cost of Ownership (TCO) Model
+## 4. Ownership Boundary: What You Keep vs What Is Abstracted
 
-| Metric | In-House Prop AMM | Flint Trade Platform | Efficiency Gain |
-| :--- | :--- | :--- | :--- |
-| **Initial Smart Contract Dev & Rust Audit** | $250,000 (Certora/Neodyme) | **$0** (Pre-Audited by Certora) | **+$250,000** |
-| **Annual Staked RPC / TPU Fleet** | $180,000 ($15k/mo) | **$0** (Hosted Landing Included) | **+$180,000** |
-| **Aggregator Integration Maintenance** | $120,000 (1 FTE Rust Eng) | **$0** (Turnkey Jupiter/DFlow) | **+$120,000** |
-| **Time-to-First-Quote** | 6 to 9 Months | **< 48 Hours** | **99% Faster** |
-| **Risk of Smart Contract Exploits** | 100% On Internal Desk | **Battle-Tested & Isolated** | **De-Risked** |
-| **Total Year 1 Overhead** | **$550,000 Capex/Opex** | **$0 Base Overhead** | **+$550,000 Capital Saved** |
+Flint does not publish pricing, and audit and infrastructure quotes vary by desk
+size and region. Any dollar-denominated savings table would therefore be
+invented. What can be stated precisely is the **boundary of responsibility**,
+which is the decision a desk is actually making.
+
+| Responsibility | In-House Prop AMM | Quoting on Flint |
+| :--- | :--- | :--- |
+| Pricing model and fair value | Desk | **Desk (unchanged)** |
+| Inventory and risk parameters | Desk | **Desk (unchanged)** |
+| Cross-pair selection | Desk | **Desk (unchanged)** |
+| AMM curve / matching logic | Desk builds and maintains | Flint (multi-maker pro-rata) |
+| Smart contract authorship + audit | Desk | Flint (audited by Certora) |
+| Transaction landing | Desk | Flint (hosted) |
+| Gas and priority fees | Desk | Flint (abstracted) |
+| Quote-refresh state writes | Full order state rewrite | Fair price + offsets |
+| Aggregator integration + upkeep | Desk, per aggregator | Jupiter, DFlow, Titan live; OKX DEX in progress |
+
+Sources: flint.trade system and feature sections; integration statuses as listed
+on flint.trade.
+
+The trade is narrow and legible: a desk gives up ownership of the matching
+venue and keeps every input that constitutes its edge. Nothing in the pricing
+or risk column moves.
+
+The cost claim worth making is not a headline savings number. It is that the
+in-house column contains four line items that **scale with requote frequency
+and aggregator count**, neither of which correlates with desk profitability.
 
 ---
 
