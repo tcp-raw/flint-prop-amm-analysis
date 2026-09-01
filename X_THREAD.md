@@ -1,78 +1,140 @@
-# Master X (Twitter) Thread: Why Professional Desks Choose Flint Over Building a Prop AMM on Solana
+# Flint — X thread (submission draft)
+
+Every factual claim below is sourced from flint.trade or docs.flintlabs.dev.
+Nothing is estimated, and no cost figures are invented.
 
 ---
 
-### Tweet 1 (The Hook & Core Premise)
-Why are institutional market makers stopping the build of in-house prop AMMs on Solana and migrating to @flint_trade_?
+### 1/ hook
 
-It comes down to 3 factors:
-1. The $500k Solana infrastructure trap
-2. Multi-maker pro-rata matching vs latency races
-3. Instant turnkey aggregator distribution (Jupiter, DFlow, Titan, OKX)
+Most "should you build your own prop AMM on Solana" takes argue about audit cost.
 
-A deep-dive breakdown 🧵👇
+Wrong axis.
 
----
+The thing that actually kills in-house prop AMMs on Solana is that **requoting is a write**, and you requote all day.
 
-### Tweet 2 (The Hidden Engineering Nightmare)
-Building a proprietary AMM on Solana sounds great until you face the runtime reality:
-
-• TPU QUIC congestion during volatility bursts
-• $15k+/month dedicated staked RPC fleets for SWQoS
-• Constant aggregator routing SDK maintenance
-• Account rent serialization & 200k CU compute limits
-
-You end up running a DevOps company instead of a trading desk.
+Here's the part @flint_trade_ solves that nobody talks about 🧵
 
 ---
 
-### Tweet 3 (The Multi-Maker Breakthrough)
-Single-maker pools create fragmented liquidity. Aggregators hate routing splits.
+### 2/ the real cost center
 
-@flint_trade_ solves this with a **Multi-Maker Prop AMM** architecture:
-Instead of 10 fragmented pools with shallow depth, Flint consolidates quotes into deep, unified liquidity venues that win top-priority aggregator routing.
+A market maker's core loop is: price moves → cancel → requote.
 
----
+On an orderbook you rewrite order state. On Solana every one of those rewrites is an on-chain write competing for blockspace, burning compute units, and paying priority fees.
 
-### Tweet 4 (Pro-Rata Matching vs Latency War)
-Traditional FIFO / price-time priority creates a toxic speed race where nanosecond colocation picks off slower makers.
+Your infra bill doesn't scale with volume. It scales with **how often you change your mind**.
 
-Flint uses **Pro-Rata Order Matching**:
-Your fill share is proportional to your quoted size and price quality. No latency front-running. Fair execution for professional quantitative desks.
+Which, if you're any good, is constantly.
 
 ---
 
-### Tweet 5 (Turnkey Aggregator Order Flow)
-An in-house AMM has 0 volume without aggregator BD.
+### 3/ what Flint actually changed
 
-Flint comes pre-integrated with the titans of Solana volume:
-• @JupiterExchange
-• @DFlowProtocol
-• @TitanExchange
-• @OKX_Ventures DEX
+Flint's quoting primitive is **fair price + offsets**.
 
-Day 1 access to 90%+ of all Solana retail and institutional swap flow.
+You install a spread ladder once. After that you shift your entire book by updating a single fair value:
 
----
+```rust
+QuoteBuilder::new()
+    .oracle_offset("SOL", |b| b.with_fair((155., 155.)))
+    .commit(&mut core).await?;
+```
 
-### Tweet 6 (The 1-Year Financial Reality)
-Let's look at the math for a $2M daily volume desk:
+One cheap update. Whole ladder moves.
 
-In-House Prop AMM:
-• Smart Contract Dev & Audit: $200k
-• Staked RPCs & DevOps: $144k/yr
-• Maintenance Engineers: $150k/yr
-Total Year 1 Capex/Opex: ~$494,000
-
-With @flint_trade_: $0 upfront fixed cost. 100% capital efficiency.
+That's not a UX nicety, it's the unit economics of the whole desk.
 
 ---
 
-### Tweet 7 (Conclusion & Call to Action)
-Your edge as a trading desk is quantitative pricing, inventory risk management, and alpha generation—not building custom Solana account parsers.
+### 4/ pro-rata, stated correctly
 
-Stop reinventing the wheel. Plug into institutional Solana market making today:
+A lot of people will tell you Flint's pro-rata means "size wins."
 
-🌐 Website: https://flint.trade/
-⚡ App: https://app.flint.trade/
-Built by @Josh_E_Wa & @thedavidgorski 🚀
+It doesn't. From their own docs:
+
+> sharper pricing still earns priority, but a step of latency no longer shuts you out
+
+Price still leads. What's removed is the part where a 20ms disadvantage takes you to **zero fill** instead of a smaller one.
+
+You compete on pricing, not on colocation.
+
+---
+
+### 5/ the capital efficiency bit
+
+Each listed token gets one market account and vault. Inside it, every maker runs an **isolated USDC-quoted mini-book**.
+
+Then Flint derives crosses per-maker, on demand:
+
+`JTO/SOL = JTO/USDC ÷ SOL/USDC`
+
+So you quote the cross without parking dedicated JTO/SOL inventory. Rebalance your SOL/USDC leg and every SOL cross reprices with it.
+
+One inventory pool. Many pairs.
+
+---
+
+### 6/ distribution you'd otherwise have to earn
+
+An in-house AMM is invisible until aggregators route to it. That's a BD problem and an ongoing integration-maintenance problem, not a coding problem.
+
+Flint is already wired in:
+
+Jupiter — live
+DFlow — live
+Titan — live
+OKX DEX — in progress
+
+Solana did $47.25B DEX volume trailing 30d, and Jupiter/DFlow/Titan have routed $1.36T all-time. (DefiLlama, as of 2026-08-07)
+
+---
+
+### 7/ who's behind it
+
+Matters for infra you're routing size through:
+
+CTO @thedavidgorski — prev Jito Labs, Jump Trading
+CEO @Josh_E_Wa — prev dYdX Foundation
+Engineers out of Anza, Google, Coinbase, Drift, Step Finance
+
+Audited by Certora.
+
+---
+
+### 8/ the honest summary
+
+Flint doesn't remove the hard part of market making. You still own your pricing, your risk, your inventory.
+
+It removes the part that was never your edge: transaction landing, priority fees, aggregator integrations, and paying a write every time you change a quote.
+
+Your alpha is your model. Not your RPC fleet.
+
+🔗 https://flint.trade/
+📄 https://docs.flintlabs.dev/
+
+---
+
+## Submission checklist
+
+- [x] Single X thread
+- [x] Tags @flint_trade_ (post 1)
+- [x] Links https://flint.trade/ (post 8)
+- [x] English
+- [ ] **Posted live** — must be published before submitting on Superteam Earn
+
+## Accuracy notes
+
+| Claim | Source |
+| --- | --- |
+| fair price + offsets requote model | flint.trade — "Efficient pricing updates: Fair + offsets" |
+| `QuoteBuilder` / `oracle_offset` snippet | flint.trade code sample |
+| pro-rata retains price priority | flint.trade — verbatim quote, post 4 |
+| isolated USDC mini-book per maker | flint.trade — "Simple USDC Quoting" |
+| synthetic cross formula | flint.trade — "Per-Maker Synthetic Cross" |
+| Jupiter/DFlow/Titan live, OKX in progress | flint.trade integrations panel |
+| $47.25B 30d, $1.36T all-time | flint.trade, citing DefiLlama, 2026-08-07 |
+| team backgrounds, Certora audit | flint.trade team + audit sections |
+
+No cost, ROI, or savings figures are claimed anywhere. Flint does not publish
+pricing, so any TCO comparison would be invented.
