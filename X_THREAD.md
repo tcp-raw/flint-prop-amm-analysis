@@ -1,83 +1,78 @@
-# Flint — X thread (submission draft)
+# Flint — X thread (copy-paste ready)
 
-Every factual claim below is sourced from flint.trade or docs.flintlabs.dev.
-Nothing is estimated, and no cost figures are invented.
+Every post is under X's 280-char limit. Post in order as a thread.
+Every factual claim is sourced from flint.trade or docs.flintlabs.dev.
+No cost, ROI, or savings figures are claimed anywhere.
 
 ---
 
-### 1/ hook
+### 1/
 
 Most "should you build your own prop AMM on Solana" takes argue about audit cost.
 
 Wrong axis.
 
-The thing that actually kills in-house prop AMMs on Solana is that **requoting is a write**, and you requote all day.
+What actually kills in-house prop AMMs is that requoting is a write — and you requote all day.
 
 Here's the part @flint_trade_ solves that nobody talks about 🧵
 
 ---
 
-### 2/ the real cost center
+### 2/
 
-A market maker's core loop is: price moves → cancel → requote.
+A market maker's loop: price moves → cancel → requote.
 
-On an orderbook you rewrite order state. On Solana every one of those rewrites is an on-chain write competing for blockspace, burning compute units, and paying priority fees.
+On Solana every rewrite is an on-chain write. Blockspace, compute units, priority fees.
 
-Your infra bill doesn't scale with volume. It scales with **how often you change your mind**.
+Your infra bill doesn't scale with volume. It scales with how often you change your mind.
 
 Which, if you're any good, is constantly.
 
 ---
 
-### 3/ what Flint actually changed
+### 3/
 
-Flint's quoting primitive is **fair price + offsets**.
+Flint's quoting primitive is fair price + offsets.
 
-You install a spread ladder once. After that you shift your entire book by updating a single fair value:
+Install a spread ladder once, then shift the whole book with a single value:
 
-```rust
-QuoteBuilder::new()
-    .oracle_offset("SOL", |b| b.with_fair((155., 155.)))
-    .commit(&mut core).await?;
-```
+.oracle_offset("SOL", |b| b.with_fair((155., 155.)))
 
-One cheap update. Whole ladder moves.
+One cheap update. Entire ladder moves.
 
-That's not a UX nicety, it's the unit economics of the whole desk.
+That's not UX. That's the unit economics of the desk.
 
 ---
 
-### 4/ pro-rata, stated correctly
+### 4/
 
-A lot of people will tell you Flint's pro-rata means "size wins."
+People will tell you Flint's pro-rata means "size wins."
 
 It doesn't. From their own docs:
 
-> sharper pricing still earns priority, but a step of latency no longer shuts you out
+"sharper pricing still earns priority, but a step of latency no longer shuts you out"
 
-Price still leads. What's removed is the part where a 20ms disadvantage takes you to **zero fill** instead of a smaller one.
-
-You compete on pricing, not on colocation.
+Price still leads. What's gone is 20ms costing you the entire fill instead of part of it.
 
 ---
 
-### 5/ the capital efficiency bit
+### 5/
 
-Each listed token gets one market account and vault. Inside it, every maker runs an **isolated USDC-quoted mini-book**.
+Each token gets one market account and vault. Every maker runs an isolated USDC-quoted mini-book inside it.
 
-Then Flint derives crosses per-maker, on demand:
+Crosses are derived per-maker, on demand:
 
-`JTO/SOL = JTO/USDC ÷ SOL/USDC`
+JTO/SOL = JTO/USDC ÷ SOL/USDC
 
-So you quote the cross without parking dedicated JTO/SOL inventory. Rebalance your SOL/USDC leg and every SOL cross reprices with it.
+So you quote the cross without parking JTO/SOL inventory.
 
-One inventory pool. Many pairs.
+One pool, many pairs.
 
 ---
 
-### 6/ distribution you'd otherwise have to earn
+### 6/
 
-An in-house AMM is invisible until aggregators route to it. That's a BD problem and an ongoing integration-maintenance problem, not a coding problem.
+An in-house AMM is invisible until aggregators route to it. That's BD plus ongoing integration upkeep, not code.
 
 Flint is already wired in:
 
@@ -86,11 +81,11 @@ DFlow — live
 Titan — live
 OKX DEX — in progress
 
-Solana did $47.25B DEX volume trailing 30d, and Jupiter/DFlow/Titan have routed $1.36T all-time. (DefiLlama, as of 2026-08-07)
+Solana did $47.25B DEX volume in 30d (DefiLlama, 2026-08-07)
 
 ---
 
-### 7/ who's behind it
+### 7/
 
 Matters for infra you're routing size through:
 
@@ -102,16 +97,15 @@ Audited by Certora.
 
 ---
 
-### 8/ the honest summary
+### 8/
 
-Flint doesn't remove the hard part of market making. You still own your pricing, your risk, your inventory.
+Flint doesn't remove the hard part of market making. You keep your pricing, risk and inventory.
 
-It removes the part that was never your edge: transaction landing, priority fees, aggregator integrations, and paying a write every time you change a quote.
+It removes what was never your edge: tx landing, priority fees, aggregator integrations, and paying a write every time you change a quote.
 
-Your alpha is your model. Not your RPC fleet.
+Your alpha is your model.
 
-🔗 https://flint.trade/
-📄 https://docs.flintlabs.dev/
+https://flint.trade/
 
 ---
 
@@ -121,20 +115,18 @@ Your alpha is your model. Not your RPC fleet.
 - [x] Tags @flint_trade_ (post 1)
 - [x] Links https://flint.trade/ (post 8)
 - [x] English
-- [ ] **Posted live** — must be published before submitting on Superteam Earn
+- [x] All 8 posts under 280 chars
+- [ ] **Posted live** — publish before submitting on Superteam Earn
 
 ## Accuracy notes
 
 | Claim | Source |
 | --- | --- |
 | fair price + offsets requote model | flint.trade — "Efficient pricing updates: Fair + offsets" |
-| `QuoteBuilder` / `oracle_offset` snippet | flint.trade code sample |
-| pro-rata retains price priority | flint.trade — verbatim quote, post 4 |
+| `oracle_offset` / `with_fair` snippet | flint.trade code sample |
+| pro-rata retains price priority | flint.trade — verbatim, post 4 |
 | isolated USDC mini-book per maker | flint.trade — "Simple USDC Quoting" |
 | synthetic cross formula | flint.trade — "Per-Maker Synthetic Cross" |
 | Jupiter/DFlow/Titan live, OKX in progress | flint.trade integrations panel |
-| $47.25B 30d, $1.36T all-time | flint.trade, citing DefiLlama, 2026-08-07 |
+| $47.25B 30d DEX volume | flint.trade, citing DefiLlama, 2026-08-07 |
 | team backgrounds, Certora audit | flint.trade team + audit sections |
-
-No cost, ROI, or savings figures are claimed anywhere. Flint does not publish
-pricing, so any TCO comparison would be invented.
